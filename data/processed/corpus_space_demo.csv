@@ -1,1 +1,7 @@
+doc_id,sentence
+1,Satellite command authentication prevents uplink spoofing attacks.
+2,LEO satellite constellations are vulnerable to jamming.
+3,Ground station intrusion can compromise mission control systems.
+4,Space system supply chain attacks may introduce firmware backdoors.
+5,Telemetry encryption mitigates data interception risks in SATCOM.
 
