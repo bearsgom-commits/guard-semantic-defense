@@ -4,9 +4,9 @@ import yaml
 import pandas as pd
 
 from src.utils.seed import set_seed
-from src.pipeline.02_embed import build_embeddings
-from src.pipeline.03_search import semantic_search
-from src.pipeline.04_eval import evaluate
+from src.pipeline.embed import build_embeddings
+from src.pipeline.search import semantic_search
+from src.pipeline.eval import evaluate
 from src.guard.guard import apply_guard
 
 
