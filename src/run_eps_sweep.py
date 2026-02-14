@@ -18,7 +18,8 @@ def main():
     seed = int(config["eval"]["seed"])
     set_seed(seed)
 
-    corpus_df, query_df = load_scifact
+    corpus_df, query_df = load_scifact()
+    # 단기 논문용: 실행 시간 단축
     query_df = query_df.sample(n=100, random_state=seed).reset_index(drop=True)
     
     corpus_df, query_df, corpus_emb, query_emb = build_embeddings(
