@@ -6,6 +6,12 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
+
+    # 🔵 6-(1) HuggingFace 캐시 경로 고정
+    env:
+      HF_HOME: ${{ github.workspace }}/.hf_cache
+      TRANSFORMERS_CACHE: ${{ github.workspace }}/.hf_cache
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
