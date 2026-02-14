@@ -1,62 +1,57 @@
 # src/data/beir_scifact.py
 from __future__ import annotations
-from typing import Tuple, Dict, List
+from typing import Tuple, Dict
+import os
 import pandas as pd
 
-def load_scifact() -> Tuple[pd.DataFrame, pd.DataFrame]:
+def load_scifact(data_dir: str = "data/beir_scifact") -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Returns
-    -------
-    corpus_df: columns = ["doc_id", "text"]
-    query_df : columns = ["qid", "text", "gold_id"]
-      - gold_id는 SciFact의 qrels에서 relevance>0인 문서 중 1개를 대표로 사용
-      - (구조연구 목적이라 1개 대표 정답으로도 충분)
+    BEIR SciFact를 공식 beir 로더로 다운로드/로딩하여
+    corpus_df: [doc_id, text]
+    query_df : [qid, text, gold_id]  (대표 1개 정답)
+    를 반환한다.
     """
-    # BEIR SciFact (via HF datasets)
-    # dataset name may vary by mirror; the most common is "BeIR/scifact"
-    from datasets import load_dataset
+    from beir.util import download_and_unzip
+    from beir.datasets.data_loader import GenericDataLoader
 
-    # 1) corpus
-    corpus = load_dataset("BeIR/scifact", "corpus", split="corpus")
-    corpus_df = pd.DataFrame({
-        "doc_id": corpus["doc_id"],
-        "text": corpus["title"],  # title+text 붙일 수도 있음
-    })
-    # 문서 본문(text)까지 쓰고 싶으면:
-    # corpus_df["text"] = corpus_df["text"].fillna("") + " " + pd.Series(corpus["text"]).fillna("")
+    url = "https://public.ukp.informatik.tu-darmstadt.de/thakur/BEIR/datasets/scifact.zip"
+    os.makedirs(data_dir, exist_ok=True)
 
-    # 2) queries
-    queries = load_dataset("BeIR/scifact", "queries", split="queries")
-    query_df = pd.DataFrame({
-        "qid": queries["query_id"],
-        "text": queries["text"] if "text" in queries.column_names else queries["query"],
-    })
+    # 다운로드/압축해제 (이미 있으면 재사용)
+    zip_path = os.path.join(data_dir, "scifact.zip")
+    if not (os.path.exists(os.path.join(data_dir, "corpus.jsonl")) and
+            os.path.exists(os.path.join(data_dir, "queries.jsonl"))):
+        download_and_unzip(url, data_dir)
 
-    # 3) qrels: query->relevant doc(s)
-    qrels = load_dataset("BeIR/scifact", "qrels", split="test")
-    # qrels columns usually: query-id, corpus-id, score
-    qrels_df = pd.DataFrame({
-        "qid": qrels["query-id"],
-        "doc_id": qrels["corpus-id"],
-        "score": qrels["score"],
-    })
-    qrels_df = qrels_df[qrels_df["score"] > 0]
+    # 로딩
+    corpus, queries, qrels = GenericDataLoader(data_folder=data_dir).load(split="test")
 
-    # 대표 gold_id: 가장 먼저 매칭되는 doc_id 1개
-    gold_map: Dict[str, str] = (
-        qrels_df.sort_values(["qid", "score"], ascending=[True, False])
-               .groupby("qid")["doc_id"]
-               .first()
-               .to_dict()
-    )
+    # corpus_df
+    # corpus: dict[doc_id] -> {"title":..., "text":...}
+    corpus_rows = []
+    for doc_id, doc in corpus.items():
+        title = (doc.get("title") or "").strip()
+        text = (doc.get("text") or "").strip()
+        merged = (title + " " + text).strip()
+        corpus_rows.append({"doc_id": str(doc_id), "text": merged})
+    corpus_df = pd.DataFrame(corpus_rows)
+
+    # query_df
+    # queries: dict[qid] -> query_text
+    query_rows = [{"qid": str(qid), "text": str(qtext)} for qid, qtext in queries.items()]
+    query_df = pd.DataFrame(query_rows)
+
+    # qrels: dict[qid] -> dict[doc_id] -> relevance
+    # 대표 gold_id: relevance가 가장 큰 doc 하나
+    gold_map: Dict[str, str] = {}
+    for qid, rels in qrels.items():
+        if not rels:
+            continue
+        # 가장 높은 relevance doc 선택
+        best_doc = max(rels.items(), key=lambda x: x[1])[0]
+        gold_map[str(qid)] = str(best_doc)
+
     query_df["gold_id"] = query_df["qid"].map(gold_map)
-
-    # gold_id 없는 query 제거 (일부 split/버전 차이 대비)
     query_df = query_df.dropna(subset=["gold_id"]).reset_index(drop=True)
-
-    # doc_id, qid 타입을 문자열로 통일 (조인 안정성)
-    corpus_df["doc_id"] = corpus_df["doc_id"].astype(str)
-    query_df["qid"] = query_df["qid"].astype(str)
-    query_df["gold_id"] = query_df["gold_id"].astype(str)
 
     return corpus_df, query_df
