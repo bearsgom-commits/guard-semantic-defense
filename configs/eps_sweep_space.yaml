@@ -1,18 +1,17 @@
 model_name: intfloat/multilingual-e5-base
 
 data:
-  corpus_path: data/processed/corpus_space_demo.csv
-  query_path: data/processed/queries_space_demo.csv
+  corpus_path: data/corpus.csv
+  query_path: data/queries.csv
 
 guard:
-  L: 3
-  alpha: 0.2
   eps_list: [0, 2, 4, 8, 16, 32, 64]
 
 eval:
-  topk: [1, 5, 10]
   seed: 13
+  topk: [1, 5, 10]
 
 output:
   metrics_path: results/retrieval/metrics_eps_sweep_seed13.csv
   runlog_path: results/retrieval/runlog.jsonl
+  rankings_dir: results/retrieval/rankings
