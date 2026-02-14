@@ -7,3 +7,4 @@ datasets
 ir_datasets
 beir
 requests
+scipy
