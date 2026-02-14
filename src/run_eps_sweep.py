@@ -18,7 +18,8 @@ def main():
     seed = int(config["eval"]["seed"])
     set_seed(seed)
 
-    corpus_df, query_df = load_scifact()
+    corpus_df, query_df = load_scifact
+    query_df = query_df.sample(n=100, random_state=seed).reset_index(drop=True)
     
     corpus_df, query_df, corpus_emb, query_emb = build_embeddings(
         config["model_name"],
