@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime
 import yaml
 import pandas as pd
@@ -23,22 +24,37 @@ def main():
     )
 
     metrics = []
+
+    rankings_dir = config.get("output", {}).get("rankings_dir", "results/retrieval/rankings")
+    os.makedirs(rankings_dir, exist_ok=True)
+
     for eps in config["guard"]["eps_list"]:
-        guarded_corpus = apply_guard(corpus_emb, float(eps))
+        eps_f = float(eps)
+
+        guarded_corpus = apply_guard(corpus_emb, eps_f, seed=seed)
         indices = semantic_search(query_emb, guarded_corpus, topk=10)
 
+        # ✅ eps별 랭킹 저장 (JSONL)
+        eps_tag = str(eps).replace(".", "_")
+        rank_path = os.path.join(rankings_dir, f"rankings_eps{eps_tag}_seed{seed}.jsonl")
+
+        idx_list = indices.tolist() if hasattr(indices, "tolist") else indices
+        with open(rank_path, "w", encoding="utf-8") as f:
+            for qid, topk_ids in enumerate(idx_list):
+                f.write(json.dumps({"qid": qid, "topk_doc_ids": topk_ids}, ensure_ascii=False) + "\n")
+
         res = evaluate(indices, query_df, corpus_df, config["eval"]["topk"])
-        res["eps"] = float(eps)
+        res["eps"] = eps_f
         res["seed"] = seed
         metrics.append(res)
 
     df = pd.DataFrame(metrics)
+
     metrics_path = config["output"]["metrics_path"]
     runlog_path = config["output"]["runlog_path"]
 
-    # ensure output dirs exist (Actions 환경)
-    import os
     os.makedirs(os.path.dirname(metrics_path), exist_ok=True)
+    os.makedirs(os.path.dirname(runlog_path), exist_ok=True)
 
     df.to_csv(metrics_path, index=False)
 
@@ -46,14 +62,15 @@ def main():
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "seed": seed,
         "metrics_path": metrics_path,
+        "rankings_dir": rankings_dir,
         "config": config,
     }
     with open(runlog_path, "a", encoding="utf-8") as f:
         f.write(json.dumps(log, ensure_ascii=False) + "\n")
 
-    print(f"Done. Saved: {metrics_path}")
+    print(f"Done. Saved metrics: {metrics_path}")
+    print(f"Done. Saved rankings: {rankings_dir}")
 
 
 if __name__ == "__main__":
     main()
-
