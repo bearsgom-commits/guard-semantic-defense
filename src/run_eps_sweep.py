@@ -9,6 +9,7 @@ from src.pipeline.embed import build_embeddings
 from src.pipeline.search import semantic_search
 from src.pipeline.eval import evaluate
 from src.guard.guard import apply_guard
+from src.data.beir_scifact import load_scifact
 
 
 def main():
@@ -17,10 +18,14 @@ def main():
     seed = int(config["eval"]["seed"])
     set_seed(seed)
 
+    corpus_df, query_df = load_scifact()
+    
     corpus_df, query_df, corpus_emb, query_emb = build_embeddings(
         config["model_name"],
-        config["data"]["corpus_path"],
-        config["data"]["query_path"]
+        #config["data"]["corpus_path"],
+        #config["data"]["query_path"]
+        corpus_df,
+        query_df
     )
 
     metrics = []
