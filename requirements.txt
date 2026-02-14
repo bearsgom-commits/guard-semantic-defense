@@ -5,3 +5,5 @@ sentence-transformers
 torch
 datasets
 ir_datasets
+beir
+requests
