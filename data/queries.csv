@@ -1,0 +1,16 @@
+qid,text,gold_id
+0,How to verify secure boot and firmware update integrity on a satellite bus?,0
+1,Best practice for segmenting ground station networks and enforcing firewall rules,1
+2,Telemetry link encryption key management and rotation for TT&C,2
+3,How to authenticate command uplinks and prevent replay attacks?,3
+4,Detect GNSS spoofing and improve navigation resilience,4
+5,Methods for onboard anomaly detection using logs and correlation,5
+6,Mitigating RF jamming on satellite communication links,6
+7,Assessing supply chain risks for space-grade components and vendors,7
+8,Secure time synchronization between space and ground systems,8
+9,Incident response playbook for mission operations during cyber events,9
+10,Least privilege access control for mission control operator accounts,10
+11,Secure configuration baseline and patch management for ground servers,11
+12,Threat intelligence sharing and reporting for space-sector incidents,12
+13,Secure SDLC guidance for flight software and mission ground tools,14
+14,Vulnerability management workflow and scanning windows for ground assets,25
