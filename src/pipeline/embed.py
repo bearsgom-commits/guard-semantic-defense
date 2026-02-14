@@ -1,43 +1,45 @@
-import pandas as pd
+from __future__ import annotations
 import numpy as np
-from sentence_transformers import SentenceTransformer
+import pandas as pd
 
+def _pick_text_column(df: pd.DataFrame) -> str:
+    # 가장 흔한 텍스트 컬럼명 후보
+    candidates = ["text", "sentence", "content", "document", "doc", "query"]
+    for c in candidates:
+        if c in df.columns:
+            return c
+    # fallback: 첫 번째 문자열 컬럼
+    for c in df.columns:
+        if df[c].dtype == object:
+            return c
+    raise ValueError("No text-like column found in CSV. Add a column like 'text'.")
 
 def build_embeddings(model_name: str, corpus_path: str, query_path: str):
     """
-    Load corpus/query CSVs and build normalized embeddings.
-    corpus CSV columns: doc_id, sentence
-    query  CSV columns: query_id, query_text, relevant_doc_id
+    Returns:
+      corpus_df, query_df, corpus_emb (N,D), query_emb (M,D)
     """
-    model = SentenceTransformer(model_name)
+    from sentence_transformers import SentenceTransformer
 
     corpus_df = pd.read_csv(corpus_path)
     query_df = pd.read_csv(query_path)
 
-    # basic validation (helps debugging in Actions)
-    required_corpus_cols = {"doc_id", "sentence"}
-    required_query_cols = {"query_id", "query_text", "relevant_doc_id"}
+    c_col = _pick_text_column(corpus_df)
+    q_col = _pick_text_column(query_df)
 
-    if corpus_df.empty:
-        raise ValueError(f"Corpus CSV is empty: {corpus_path}")
-    if query_df.empty:
-        raise ValueError(f"Query CSV is empty: {query_path}")
+    model = SentenceTransformer(model_name)
 
-    if not required_corpus_cols.issubset(set(corpus_df.columns)):
-        raise ValueError(f"Corpus CSV must contain columns {required_corpus_cols}, got {set(corpus_df.columns)}")
-    if not required_query_cols.issubset(set(query_df.columns)):
-        raise ValueError(f"Query CSV must contain columns {required_query_cols}, got {set(query_df.columns)}")
+    corpus_texts = corpus_df[c_col].astype(str).tolist()
+    query_texts = query_df[q_col].astype(str).tolist()
 
-    corpus_embeddings = model.encode(
-        corpus_df["sentence"].tolist(),
-        normalize_embeddings=True,
-        show_progress_bar=True
+    corpus_emb = model.encode(
+        corpus_texts, normalize_embeddings=True, convert_to_numpy=True, show_progress_bar=False
+    )
+    query_emb = model.encode(
+        query_texts, normalize_embeddings=True, convert_to_numpy=True, show_progress_bar=False
     )
 
-    query_embeddings = model.encode(
-        query_df["query_text"].tolist(),
-        normalize_embeddings=True,
-        show_progress_bar=True
-    )
+    corpus_emb = np.asarray(corpus_emb, dtype=np.float32)
+    query_emb = np.asarray(query_emb, dtype=np.float32)
 
-    return corpus_df, query_df, np.array(corpus_embeddings), np.array(query_embeddings)
+    return corpus_df, query_df, corpus_emb, query_emb
