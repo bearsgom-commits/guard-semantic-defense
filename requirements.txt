@@ -1,7 +1,5 @@
-torch>=2.0.0
-sentence-transformers>=2.2.2
-numpy>=1.23
-pandas>=2.0
-scikit-learn>=1.3
-tqdm>=4.66
-pyyaml>=6.0
+pyyaml
+pandas
+numpy
+sentence-transformers
+torch
