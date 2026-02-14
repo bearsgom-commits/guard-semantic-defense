@@ -1,52 +1,50 @@
-from __future__ import annotations
+# src/pipeline/eval.py
 import numpy as np
-import pandas as pd
 
-def _pick_gold_column(query_df: pd.DataFrame) -> str:
-    # 쿼리 정답(정답 문서 인덱스) 컬럼 후보
-    candidates = ["gold_id", "pos_id", "positive_id", "answer_id", "target_id", "doc_id", "corpus_id"]
-    for c in candidates:
-        if c in query_df.columns:
-            return c
-    raise ValueError(
-        "Query CSV must contain a gold/positive doc id column. "
-        "Add one of: gold_id, pos_id, positive_id, answer_id, target_id, doc_id, corpus_id"
-    )
+def _dcg(rels):
+    rels = np.asarray(rels, dtype=float)
+    if rels.size == 0:
+        return 0.0
+    discounts = 1.0 / np.log2(np.arange(2, rels.size + 2))
+    return float(np.sum(rels * discounts))
 
-def recall_at_k(indices: np.ndarray, gold: np.ndarray, k: int) -> float:
-    hits = 0
-    for i in range(len(gold)):
-        if int(gold[i]) in set(map(int, indices[i, :k])):
-            hits += 1
-    return hits / max(1, len(gold))
-
-def ndcg_at_k_binary(indices: np.ndarray, gold: np.ndarray, k: int = 10) -> float:
+def evaluate(indices, query_df, corpus_df, qrels, topk=(1,5,10)):
     """
-    Binary relevance nDCG@k with exactly one relevant doc per query (gold).
-    Stable + no sklearn shape issues.
+    indices: np.ndarray [num_queries, K]  (row = ranked doc indices)
+    qrels  : dict(query_id -> dict(doc_id -> score))   (BEIR-style)
     """
-    dcgs = []
-    for i in range(len(gold)):
-        rel_doc = int(gold[i])
-        ranking = list(map(int, indices[i, :k]))
-        if rel_doc in ranking:
-            rank = ranking.index(rel_doc) + 1  # 1-based
-            dcg = 1.0 / np.log2(rank + 1.0)
-        else:
-            dcg = 0.0
-        idcg = 1.0  # relevant doc at rank 1 => 1/log2(2)=1
-        dcgs.append(dcg / idcg)
-    return float(np.mean(dcgs)) if dcgs else 0.0
+    doc_ids = corpus_df["doc_id"].astype(str).tolist()
+    qids = query_df["query_id"].astype(str).tolist()
 
-def evaluate(indices: np.ndarray, query_df: pd.DataFrame, corpus_df: pd.DataFrame, topk_list: list[int]):
-    gold_col = _pick_gold_column(query_df)
-    gold = query_df[gold_col].to_numpy()
+    K = indices.shape[1]
+    topk = sorted(set(int(x) for x in topk))
+    max_k = max(topk)
+    assert max_k <= K, f"Need indices with at least {max_k} columns, got K={K}"
+
+    # Recall@k (binary hit: any relevant in top-k)
+    recalls = {k: [] for k in topk}
+    ndcgs = []
+
+    for qi, qid in enumerate(qids):
+        rel_dict = qrels.get(qid, {})
+        rel_set = set(rel_dict.keys())
+
+        ranked_docids = [doc_ids[j] for j in indices[qi, :max_k]]
+        for k in topk:
+            hit = any(d in rel_set for d in ranked_docids[:k])
+            recalls[k].append(1.0 if hit else 0.0)
+
+        # nDCG@10 (or min(10, K))
+        k_ndcg = min(10, K)
+        rels = [rel_dict.get(d, 0.0) for d in ranked_docids[:k_ndcg]]
+        dcg = _dcg(rels)
+
+        ideal = sorted(rel_dict.values(), reverse=True)[:k_ndcg]
+        idcg = _dcg(ideal)
+        ndcgs.append(0.0 if idcg == 0.0 else dcg / idcg)
 
     results = {}
-    for k in topk_list:
-        results[f"recall@{k}"] = recall_at_k(indices, gold, int(k))
-
-    # 기본은 nDCG@10
-    results["ndcg@10"] = ndcg_at_k_binary(indices, gold, k=10)
-
+    for k in topk:
+        results[f"recall@{k}"] = float(np.mean(recalls[k])) if recalls[k] else 0.0
+    results["ndcg@10"] = float(np.mean(ndcgs)) if ndcgs else 0.0
     return results
