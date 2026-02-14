@@ -1,0 +1,31 @@
+doc_id,text
+0,Satellite bus firmware update integrity and secure boot verification procedures
+1,Ground station network segmentation and firewall policy for mission operations
+2,Telemetry encryption key management for satellite TT&C links and rotation policy
+3,Command uplink authentication and anti-replay protections for space assets
+4,GNSS spoofing detection methods for navigation resilience in critical services
+5,Spacecraft anomaly detection using onboard logs and event correlation
+6,RF jamming mitigation strategies for satellite communication links
+7,Supply chain risk assessment for space-grade components and trusted vendors
+8,Secure time synchronization for distributed space-ground systems
+9,Incident response playbook for satellite operations and contingency modes
+10,Access control and least privilege for mission control operator accounts
+11,Secure configuration baseline for ground segment servers and patching cadence
+12,Threat intelligence sharing model for space sector cyber incidents
+13,Cryptographic agility planning for long-lived spacecraft missions
+14,Secure software development lifecycle for flight software and ground tools
+15,Endpoint protection guidelines for mission laptops and removable media controls
+16,Network intrusion detection for ground station traffic and alert triage
+17,Authentication hardening for satellite command gateways and jump hosts
+18,Data diode design considerations for high-assurance mission networks
+19,Post-incident forensics collection from ground segment logs and backups
+20,Secure backup and recovery for mission databases and telemetry archives
+21,Zero trust principles applied to space-ground communication environments
+22,Physical security controls at ground antenna sites and access monitoring
+23,Secure API design for mission data services and rate limiting controls
+24,Insider threat monitoring approach for mission operations teams
+25,Vulnerability management workflow for ground segment assets and scanning windows
+26,Satellite payload isolation and separation of duties in control channels
+27,Secure telemetry parsing to prevent injection and malformed packet attacks
+28,Encryption at rest for mission planning documents and restricted storage
+29,Continuous monitoring dashboard metrics for satellite cyber posture reporting
